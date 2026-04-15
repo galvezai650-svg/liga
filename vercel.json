@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "env": {
+    "DATABASE_URL": "@turso-db-url",
+    "DIRECT_DATABASE_URL": "@turso-direct-url"
+  }
+}

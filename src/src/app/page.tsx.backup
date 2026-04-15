@@ -1,0 +1,2499 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import {
+  Trophy,
+  Calendar,
+  FileText,
+  Users,
+  Mail,
+  Menu,
+  X,
+  MapPin,
+  Clock,
+  ArrowRight,
+  ImageIcon,
+  Filter,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Home,
+  Eye,
+  Goal,
+  Handshake,
+  Sparkles,
+  Shield,
+  Award,
+  Flag,
+  Star,
+  Target,
+  Download,
+  FolderOpen,
+  Search,
+  BarChart3,
+  Building2,
+  Scale,
+  File,
+  FileDown,
+} from "lucide-react";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselPrevious,
+  CarouselNext,
+  type CarouselApi,
+} from "@/components/ui/carousel";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+// ============ TYPES ============
+interface Tournament {
+  id: string;
+  name: string;
+  description: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  status: string;
+  category: string | null;
+  image: string | null;
+}
+
+interface Event {
+  id: string;
+  title: string;
+  description: string | null;
+  date: string | null;
+  location: string | null;
+  image: string | null;
+  eventType: string | null;
+}
+
+interface Sponsor {
+  id: string;
+  name: string;
+  logo: string | null;
+  website: string | null;
+  tier: string;
+}
+
+interface CarouselSlide {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  image: string | null;
+  link: string | null;
+  linkText: string | null;
+}
+
+interface InfoCard {
+  id: string;
+  title: string;
+  description: string | null;
+  image: string | null;
+  icon: string | null;
+  link: string | null;
+  linkText: string | null;
+  color: string | null;
+  createdAt?: string;
+}
+
+interface GalleryItem {
+  id: string;
+  title: string | null;
+  description: string | null;
+  image: string;
+  category: string | null;
+}
+
+interface ScheduleFile {
+  id: string;
+  name: string;
+  fileName: string;
+  fileType: string;
+  fileData: string | null;
+  description: string | null;
+  createdAt: string;
+}
+
+interface StatisticsFile {
+  id: string;
+  name: string;
+  fileName: string;
+  fileType: string;
+  fileData: string | null;
+  description: string | null;
+  createdAt: string;
+}
+
+interface Resolution {
+  id: string;
+  title: string;
+  type: string;
+  number: string;
+  description: string | null;
+  fileUrl: string | null;
+  fileData: string | null;
+  fileName: string | null;
+  fileType: string | null;
+  date: string;
+}
+
+interface SampleDocument {
+  id: string;
+  title: string;
+  type: string;
+  date: string;
+  description: string;
+  size?: string;
+}
+
+interface Club {
+  id: string;
+  name: string;
+  category: string;
+  founded: string;
+  location: string;
+  players: number;
+  trophies: number;
+  colors: string[];
+}
+
+// ============ NAVIGATION ITEMS ============
+type Section =
+  | "home"
+  | "torneos"
+  | "programacion"
+  | "estadisticas"
+  | "resoluciones"
+  | "noticias"
+  | "eventos"
+  | "nosotros"
+  | "organizacion"
+  | "documentos"
+  | "clubes";
+
+const navItems = [
+  { label: "Inicio", section: "home" as Section },
+  { label: "Torneos", section: "torneos" as Section },
+  {
+    label: "Programación",
+    section: "programacion" as Section,
+    subitems: [
+      { label: "Partidos", section: "programacion" as Section },
+      { label: "Estadísticas", section: "estadisticas" as Section },
+      { label: "Resoluciones", section: "resoluciones" as Section },
+    ],
+  },
+  { label: "Noticias", section: "noticias" as Section },
+  { label: "Eventos", section: "eventos" as Section },
+  {
+    label: "Nosotros",
+    section: "nosotros" as Section,
+    subitems: [
+      { label: "Organización", section: "organizacion" as Section },
+      { label: "Documentos", section: "documentos" as Section },
+      { label: "Clubes", section: "clubes" as Section },
+    ],
+  },
+];
+
+// ============ HARDCODED DATA ============
+const sampleDocuments: SampleDocument[] = [
+  { id: "1", title: "Reglamento General de la Liga 2024", type: "Reglamento", date: "2024-01-15", description: "Reglamento oficial de la Liga Caldense de Fútbol para el año 2024.", size: "2.5 MB" },
+  { id: "2", title: "Estatutos de la LCF", type: "Estatutos", date: "2023-06-20", description: "Estatutos legales de la Liga Caldense de Fútbol.", size: "1.8 MB" },
+  { id: "3", title: "Resolución No. 001 - Inscripciones 2024", type: "Resolución", date: "2024-02-01", description: "Resolución sobre el proceso de inscripciones para el año 2024.", size: "500 KB" },
+  { id: "4", title: "Resolución No. 002 - Fechas de Torneos", type: "Resolución", date: "2024-02-15", description: "Calendario oficial de torneos para la temporada 2024.", size: "350 KB" },
+  { id: "5", title: "Manual del Jugador", type: "Manual", date: "2023-08-10", description: "Guía con los derechos y deberes de los jugadores inscritos.", size: "3.2 MB" },
+  { id: "6", title: "Código de Disciplina", type: "Reglamento", date: "2023-07-05", description: "Normas disciplinarias y sanciones aplicables.", size: "1.1 MB" },
+  { id: "7", title: "Formato de Inscripción de Equipos", type: "Formulario", date: "2024-01-10", description: "Formulario oficial para la inscripción de nuevos equipos.", size: "200 KB" },
+  { id: "8", title: "Acta de Asamblea General 2023", type: "Acta", date: "2023-12-15", description: "Acta de la asamblea general ordinaria realizada en diciembre.", size: "450 KB" },
+];
+
+const sampleClubs: Club[] = [
+  { id: "1", name: "Club Deportivo Caldense", category: "Primera A", founded: "1995", location: "Caldas, Antioquia", players: 35, trophies: 12, colors: ["#22c55e", "#ffffff"] },
+  { id: "2", name: "Club Atlético La Dorada", category: "Primera A", founded: "1998", location: "La Dorada", players: 32, trophies: 8, colors: ["#eab308", "#000000"] },
+  { id: "3", name: "Club Los Andes FC", category: "Primera B", founded: "2001", location: "Manizales", players: 28, trophies: 5, colors: ["#3b82f6", "#ffffff"] },
+  { id: "4", name: "Juvenil del Sur", category: "Juvenil", founded: "2010", location: "Chinchiná", players: 25, trophies: 3, colors: ["#ef4444", "#ffffff"] },
+  { id: "5", name: "Club Deportivo Riosucio", category: "Primera B", founded: "2005", location: "Riosucio", players: 30, trophies: 4, colors: ["#8b5cf6", "#ffffff"] },
+  { id: "6", name: "Escuela de Fútbol Manzanares", category: "Juvenil", founded: "2015", location: "Manzanares", players: 22, trophies: 2, colors: ["#f97316", "#000000"] },
+  { id: "7", name: "Club Filandia FC", category: "Primera A", founded: "2000", location: "Filandia", players: 33, trophies: 7, colors: ["#06b6d4", "#ffffff"] },
+  { id: "8", name: "Salamina Deportivo", category: "Primera B", founded: "2003", location: "Salamina", players: 27, trophies: 3, colors: ["#84cc16", "#000000"] },
+  { id: "9", name: "Club Belalcázar", category: "Juvenil", founded: "2012", location: "Belalcázar", players: 20, trophies: 1, colors: ["#ec4899", "#ffffff"] },
+  { id: "10", name: "Anserma FC", category: "Primera A", founded: "1997", location: "Anserma", players: 31, trophies: 6, colors: ["#14b8a6", "#ffffff"] },
+  { id: "11", name: "Club Viterbo", category: "Primera B", founded: "2008", location: "Viterbo", players: 26, trophies: 2, colors: ["#f43f5e", "#ffffff"] },
+  { id: "12", name: "Escuela Supercampeones", category: "Infantil", founded: "2018", location: "Caldas", players: 18, trophies: 1, colors: ["#a855f7", "#fbbf24"] },
+];
+
+const comisiones = [
+  { nombre: "Comisión Disciplinaria de la Liga", descripcion: "Encargada de aplicar el régimen disciplinario de la liga" },
+  { nombre: "Comisión Disciplinaria de Torneos", descripcion: "Responsable de la disciplina en los torneos oficiales" },
+  { nombre: "Comisión de Apelaciones", descripcion: "Órgano de revisión de decisiones disciplinarias" },
+  { nombre: "Comisión del Estatuto del Jugador", descripcion: "Regula el registro y estatus de los jugadores" },
+  { nombre: "Comisión Técnica", descripcion: "Supervisa aspectos técnicos y deportivos" },
+  { nombre: "Comisión de Juzgamiento", descripcion: "Evalúa y califica el desempeño arbitral" },
+  { nombre: "Comisión de Torneos", descripcion: "Organiza y gestiona los torneos oficiales" },
+  { nombre: "Comisión de Fútbol Femenino", descripcion: "Promueve y desarrolla el fútbol femenino" },
+  { nombre: "Comisión de Fútbol Playa", descripcion: "Desarrolla el fútbol playa en la región" },
+  { nombre: "Comisión de Fútbol Sala", descripcion: "Promueve y organiza el fútbol sala" },
+];
+
+const autoridadesNosotros = [
+  { cargo: "Presidente", nombre: "Juan Carlos Rodríguez", descripcion: "Liderando la liga con pasión y dedicación desde 2018.", icon: Award },
+  { cargo: "Vicepresidente", nombre: "María Fernanda López", descripcion: "Apoyando el crecimiento institucional con visión de futuro.", icon: Shield },
+  { cargo: "Secretario General", nombre: "Carlos Alberto Martínez", descripcion: "Gestionando la administración con eficiencia y transparencia.", icon: Flag },
+];
+
+const autoridadesOrg = [
+  { cargo: "Presidente", nombre: "Juan Carlos Rodríguez", descripcion: "Liderando la liga con pasión y dedicación desde 2018.", icon: Award },
+  { cargo: "Vicepresidente", nombre: "María Fernanda López", descripcion: "Apoyando el crecimiento institucional con visión de futuro.", icon: Shield },
+  { cargo: "Secretario General", nombre: "Carlos Alberto Martínez", descripcion: "Gestionando la administración con eficiencia y transparencia.", icon: Flag },
+  { cargo: "Tesorero", nombre: "Andrés Felipe Gómez", descripcion: "Administrando los recursos con honestidad y transparencia.", icon: Award },
+  { cargo: "Director Técnico", nombre: "Roberto Carlos Herrera", descripcion: "Supervisando el aspecto deportivo y técnico de la liga.", icon: Trophy },
+  { cargo: "Director de Comunicaciones", nombre: "Laura Patricia Sánchez", descripcion: "Conectando la liga con la comunidad y medios.", icon: Flag },
+];
+
+const valores = [
+  { nombre: "Respeto", descripcion: "Valoramos la integridad y el fair play en cada partido.", icon: Handshake },
+  { nombre: "Compromiso", descripcion: "Dedicación total al desarrollo del fútbol regional.", icon: Target },
+  { nombre: "Excelencia", descripcion: "Buscamos la mejora continua en todo lo que hacemos.", icon: Star },
+  { nombre: "Trabajo en Equipo", descripcion: "La unión hace la fuerza dentro y fuera del campo.", icon: Users },
+];
+
+const eventTypes = [
+  { value: "all", label: "Todos" },
+  { value: "Partido", label: "Partido" },
+  { value: "Torneo", label: "Torneo" },
+  { value: "Ceremonia", label: "Ceremonia" },
+];
+
+const LCF_LOGO = "https://image2url.com/r2/default/images/1772308448713-bc826408-825f-4bdc-a154-6795cad265de.png";
+
+// ============ HELPER FUNCTIONS ============
+const formatDateTime = (dateString: string | null) => {
+  if (!dateString) return "";
+  return new Date(dateString).toLocaleDateString("es-ES", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const formatDateLong = (dateString: string | null) => {
+  if (!dateString) return "";
+  return new Date(dateString).toLocaleDateString("es-ES", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+};
+
+const formatTime = (dateString: string | null) => {
+  if (!dateString) return "";
+  return new Date(dateString).toLocaleTimeString("es-ES", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const formatDate = (dateString: string | null | undefined) => {
+  if (!dateString) return "";
+  return new Date(dateString).toLocaleDateString("es-ES", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+};
+
+// ============ MAIN COMPONENT ============
+export default function LCFPage() {
+  const [currentSection, setCurrentSection] = useState<Section>("home");
+  const [carouselApi, setCarouselApi] = useState<CarouselApi>();
+  const [carouselCurrent, setCarouselCurrent] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [loginPin, setLoginPin] = useState("");
+  const [selectedImage, setSelectedImage] = useState<{
+    src: string;
+    alt: string;
+  } | null>(null);
+
+  // Data states
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [sponsors, setSponsors] = useState<Sponsor[]>([]);
+  const [carouselSlides, setCarouselSlides] = useState<CarouselSlide[]>([]);
+  const [infoCards, setInfoCards] = useState<InfoCard[]>([]);
+  const [gallery, setGallery] = useState<GalleryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Section-specific states
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [eventFilter, setEventFilter] = useState("all");
+  const [visibleCount, setVisibleCount] = useState(6);
+
+  // Programación states
+  const [scheduleFiles, setScheduleFiles] = useState<ScheduleFile[]>([]);
+  const [scheduleLoading, setScheduleLoading] = useState(true);
+  const [selectedScheduleFile, setSelectedScheduleFile] =
+    useState<ScheduleFile | null>(null);
+  const [showScheduleList, setShowScheduleList] = useState(false);
+  const [scheduleSearch, setScheduleSearch] = useState("");
+  const [scheduleBlobUrl, setScheduleBlobUrl] = useState<string | null>(null);
+
+  // Estadísticas states
+  const [statsFiles, setStatsFiles] = useState<StatisticsFile[]>([]);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [selectedStatsFile, setSelectedStatsFile] =
+    useState<StatisticsFile | null>(null);
+  const [showStatsList, setShowStatsList] = useState(false);
+  const [statsSearch, setStatsSearch] = useState("");
+  const [statsBlobUrl, setStatsBlobUrl] = useState<string | null>(null);
+
+  // Resoluciones states
+  const [resolutions, setResolutions] = useState<Resolution[]>([]);
+  const [resolutionsLoading, setResolutionsLoading] = useState(true);
+  const [selectedResolution, setSelectedResolution] =
+    useState<Resolution | null>(null);
+  const [showResolutionsList, setShowResolutionsList] = useState(false);
+  const [resolutionsSearch, setResolutionsSearch] = useState("");
+
+  // Documentos & Clubes states
+  const [docsSearch, setDocsSearch] = useState("");
+  const [docsType, setDocsType] = useState("todos");
+  const [clubsSearch, setClubsSearch] = useState("");
+  const [clubsCategory, setClubsCategory] = useState("todos");
+
+  // Organization
+  const [comisionesExpanded, setComisionesExpanded] = useState(false);
+
+  // ============ FETCH DATA ============
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [tournamentsRes, eventsRes, sponsorsRes, carouselRes, cardsRes, galleryRes] =
+          await Promise.all([
+            fetch("/api/public/tournaments"),
+            fetch("/api/public/events"),
+            fetch("/api/public/sponsors"),
+            fetch("/api/public/carousel"),
+            fetch("/api/public/infocards"),
+            fetch("/api/public/gallery"),
+          ]);
+
+        const [tournamentsData, eventsData, sponsorsData, carouselData, cardsData, galleryData] =
+          await Promise.all([
+            tournamentsRes.json(),
+            eventsRes.json(),
+            sponsorsRes.json(),
+            carouselRes.json(),
+            cardsRes.json(),
+            galleryRes.json(),
+          ]);
+
+        setTournaments(tournamentsData);
+        setEvents(eventsData);
+        setSponsors(sponsorsData);
+        setCarouselSlides(carouselData);
+        setInfoCards(cardsData);
+        setGallery(galleryData);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // Fetch schedule files
+  useEffect(() => {
+    if (currentSection !== "programacion") return;
+    const fetchFiles = async () => {
+      try {
+        const res = await fetch("/api/public/schedule-files");
+        const data = await res.json();
+        setScheduleFiles(data);
+        if (data.length > 0) setSelectedScheduleFile(data[0]);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setScheduleLoading(false);
+      }
+    };
+    fetchFiles();
+  }, [currentSection]);
+
+  // Fetch statistics files
+  useEffect(() => {
+    if (currentSection !== "estadisticas") return;
+    const fetchFiles = async () => {
+      try {
+        const res = await fetch("/api/public/statistics-files");
+        const data = await res.json();
+        setStatsFiles(data);
+        if (data.length > 0) setSelectedStatsFile(data[0]);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+    fetchFiles();
+  }, [currentSection]);
+
+  // Fetch resolutions
+  useEffect(() => {
+    if (currentSection !== "resoluciones") return;
+    const fetchRes = async () => {
+      try {
+        const res = await fetch("/api/public/resolutions");
+        const data = await res.json();
+        setResolutions(data);
+        if (data.length > 0) setSelectedResolution(data[0]);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setResolutionsLoading(false);
+      }
+    };
+    fetchRes();
+  }, [currentSection]);
+
+  // ============ BLOB URL MANAGEMENT ============
+  useEffect(() => {
+    if (scheduleBlobUrl) {
+      URL.revokeObjectURL(scheduleBlobUrl);
+      setScheduleBlobUrl(null);
+    }
+    if (!selectedScheduleFile?.fileData) return;
+    try {
+      const base64Data = selectedScheduleFile.fileData.split(",")[1];
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: "application/pdf" });
+      setScheduleBlobUrl(URL.createObjectURL(blob));
+    } catch (e) {
+      console.error(e);
+      setScheduleBlobUrl(selectedScheduleFile.fileData);
+    }
+    return () => {
+      if (scheduleBlobUrl && scheduleBlobUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(scheduleBlobUrl);
+      }
+    };
+  }, [selectedScheduleFile?.id]);
+
+  useEffect(() => {
+    if (statsBlobUrl) {
+      URL.revokeObjectURL(statsBlobUrl);
+      setStatsBlobUrl(null);
+    }
+    if (!selectedStatsFile?.fileData) return;
+    try {
+      const base64Data = selectedStatsFile.fileData.split(",")[1];
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: "application/pdf" });
+      setStatsBlobUrl(URL.createObjectURL(blob));
+    } catch (e) {
+      console.error(e);
+      setStatsBlobUrl(selectedStatsFile.fileData);
+    }
+    return () => {
+      if (statsBlobUrl && statsBlobUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(statsBlobUrl);
+      }
+    };
+  }, [selectedStatsFile?.id]);
+
+  // ============ CAROUSEL AUTOPLAY ============
+  useEffect(() => {
+    if (!carouselApi || carouselSlides.length === 0 || currentSection !== "home") return;
+    const interval = setInterval(() => {
+      carouselApi.scrollNext();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [carouselApi, carouselSlides.length, currentSection]);
+
+  useEffect(() => {
+    if (!carouselApi) return;
+    const onSelect = () => setCarouselCurrent(carouselApi.selectedScrollSnap());
+    carouselApi.on("select", onSelect);
+    return () => {
+      carouselApi.off("select", onSelect);
+    };
+  }, [carouselApi]);
+
+  // ============ NAVIGATION ============
+  const navigateTo = useCallback(
+    (section: Section) => {
+      setCurrentSection(section);
+      setMobileMenuOpen(false);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    []
+  );
+
+  // ============ LOGIN ============
+  const handleLogin = async () => {
+    if (!loginPin.trim()) {
+      alert("Por favor ingresa el PIN");
+      return;
+    }
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin: loginPin }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        sessionStorage.setItem("lcf_admin_logged_in", "true");
+        sessionStorage.setItem("lcf_admin_user", JSON.stringify(data.user));
+        setAdminOpen(false);
+        setLoginPin("");
+        window.location.href = data.user.role === "dev" ? "/admin/dev" : "/admin";
+      } else {
+        if (data.blocked) {
+          alert("🔒 " + data.error);
+          setAdminOpen(false);
+        } else {
+          alert(data.error || "PIN inválido");
+        }
+        setLoginPin("");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      alert("Error al iniciar sesión");
+    }
+  };
+
+  // ============ DOWNLOAD HELPERS ============
+  const handleDownload = useCallback((fileData: string, fileName: string) => {
+    if (!fileData) return;
+    const link = document.createElement("a");
+    link.href = fileData;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, []);
+
+  // ============ COMPUTED VALUES ============
+  const filteredTournaments = tournaments.filter(
+    (t) => t.image && (statusFilter === "all" || t.status === statusFilter)
+  );
+
+  const filteredEvents =
+    eventFilter === "all"
+      ? events
+      : events.filter((e) => e.eventType === eventFilter);
+
+  const filteredScheduleFiles = scheduleFiles.filter(
+    (f) =>
+      f.name.toLowerCase().includes(scheduleSearch.toLowerCase()) ||
+      f.fileName.toLowerCase().includes(scheduleSearch.toLowerCase()) ||
+      (f.description?.toLowerCase().includes(scheduleSearch.toLowerCase()) ??
+        false)
+  );
+
+  const filteredStatsFiles = statsFiles.filter(
+    (f) =>
+      f.name.toLowerCase().includes(statsSearch.toLowerCase()) ||
+      f.fileName.toLowerCase().includes(statsSearch.toLowerCase()) ||
+      (f.description?.toLowerCase().includes(statsSearch.toLowerCase()) ??
+        false)
+  );
+
+  const filteredResolutions = resolutions.filter(
+    (r) =>
+      r.title.toLowerCase().includes(resolutionsSearch.toLowerCase()) ||
+      r.number.toLowerCase().includes(resolutionsSearch.toLowerCase()) ||
+      (r.description?.toLowerCase().includes(resolutionsSearch.toLowerCase()) ??
+        false)
+  );
+
+  const documentTypes = [
+    "todos",
+    ...new Set(sampleDocuments.map((d) => d.type)),
+  ];
+  const filteredDocuments = sampleDocuments.filter((doc) => {
+    const matchSearch =
+      doc.title.toLowerCase().includes(docsSearch.toLowerCase()) ||
+      doc.description.toLowerCase().includes(docsSearch.toLowerCase());
+    const matchType = docsType === "todos" || doc.type === docsType;
+    return matchSearch && matchType;
+  });
+
+  const clubCategories = [
+    "todos",
+    ...new Set(sampleClubs.map((c) => c.category)),
+  ];
+  const filteredClubList = sampleClubs.filter((club) => {
+    const matchSearch =
+      club.name.toLowerCase().includes(clubsSearch.toLowerCase()) ||
+      club.location.toLowerCase().includes(clubsSearch.toLowerCase());
+    const matchCat =
+      clubsCategory === "todos" || club.category === clubsCategory;
+    return matchSearch && matchCat;
+  });
+
+  const visibleNewsCards = infoCards.slice(0, visibleCount);
+  const hasMoreNews = visibleCount < infoCards.length;
+
+  // ============ HELPERS FOR SECTION ============
+  const isActive = (section: Section) => currentSection === section;
+
+  const getSectionTitle = (): string => {
+    const map: Record<Section, string> = {
+      home: "",
+      torneos: "Torneos",
+      programacion: "Programación de Partidos",
+      estadisticas: "Estadísticas",
+      resoluciones: "Resoluciones",
+      noticias: "Noticias",
+      eventos: "Eventos",
+      nosotros: "Nosotros",
+      organizacion: "Organización",
+      documentos: "Documentos",
+      clubes: "Clubes",
+    };
+    return map[currentSection];
+  };
+
+  const getGradientClass = (index: number) => {
+    const gradients = [
+      "from-green-400 to-green-600",
+      "from-amber-400 to-amber-600",
+      "from-blue-400 to-blue-600",
+      "from-rose-400 to-rose-600",
+      "from-purple-400 to-purple-600",
+      "from-teal-400 to-teal-600",
+    ];
+    return gradients[index % gradients.length];
+  };
+
+  const getEventGradient = (eventType: string | null, index: number) => {
+    if (eventType === "Partido") return "from-green-400 to-green-600";
+    if (eventType === "Torneo") return "from-amber-400 to-amber-600";
+    if (eventType === "Ceremonia") return "from-purple-400 to-purple-600";
+    return getGradientClass(index);
+  };
+
+  const getEventBadgeColor = (eventType: string | null) => {
+    if (eventType === "Partido") return "bg-gradient-to-r from-green-500 to-green-600";
+    if (eventType === "Torneo") return "bg-gradient-to-r from-amber-500 to-amber-600";
+    if (eventType === "Ceremonia") return "bg-gradient-to-r from-purple-500 to-purple-600";
+    return "bg-gradient-to-r from-blue-500 to-blue-600";
+  };
+
+  const getTypeColor = (type: string) => {
+    const colors: Record<string, string> = {
+      reglamento: "bg-purple-100 text-purple-800 border-purple-200",
+      resolucion: "bg-blue-100 text-blue-800 border-blue-200",
+      circular: "bg-green-100 text-green-800 border-green-200",
+      acta: "bg-amber-100 text-amber-800 border-amber-200",
+      calendario: "bg-cyan-100 text-cyan-800 border-cyan-200",
+      sancion: "bg-red-100 text-red-800 border-red-200",
+      protocolo: "bg-indigo-100 text-indigo-800 border-indigo-200",
+    };
+    return colors[type] || "bg-gray-100 text-gray-800 border-gray-200";
+  };
+
+  const getTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      reglamento: "Reglamento",
+      resolucion: "Resolución",
+      circular: "Circular",
+      acta: "Acta",
+      calendario: "Calendario",
+      sancion: "Sanción",
+      protocolo: "Protocolo",
+    };
+    return labels[type] || type;
+  };
+
+  const getDocTypeColor = (type: string) => {
+    const colors: Record<string, string> = {
+      Reglamento: "bg-green-100 text-green-700",
+      Estatutos: "bg-blue-100 text-blue-700",
+      Resolución: "bg-amber-100 text-amber-700",
+      Manual: "bg-purple-100 text-purple-700",
+      Formulario: "bg-cyan-100 text-cyan-700",
+      Acta: "bg-rose-100 text-rose-700",
+    };
+    return colors[type] || "bg-gray-100 text-gray-700";
+  };
+
+  const getClubCategoryColor = (category: string) => {
+    const colors: Record<string, string> = {
+      "Primera A": "bg-green-100 text-green-700",
+      "Primera B": "bg-blue-100 text-blue-700",
+      Juvenil: "bg-amber-100 text-amber-700",
+      Infantil: "bg-purple-100 text-purple-700",
+    };
+    return colors[category] || "bg-gray-100 text-gray-700";
+  };
+
+  // ============ RENDER SECTION HEADERS ============
+  const renderPageHeader = (
+    title: string,
+    subtitle: string,
+    breadcrumbTrail?: { label: string; section?: Section }[]
+  ) => (
+    <div className="bg-gradient-to-r from-green-700 to-green-900 text-white py-6 relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
+      <div className="container mx-auto px-4 relative z-10">
+        {/* Breadcrumb */}
+        <nav className="flex items-center text-sm text-green-200 mb-3 flex-wrap gap-1">
+          <button
+            onClick={() => navigateTo("home")}
+            className="flex items-center hover:text-white transition-colors"
+          >
+            <Home className="h-4 w-4 mr-1" />
+            Inicio
+          </button>
+          {breadcrumbTrail?.map((crumb, i) => (
+            <span key={i} className="flex items-center">
+              <ChevronRight className="h-4 w-4 mx-1" />
+              {crumb.section ? (
+                <button
+                  onClick={() => navigateTo(crumb.section!)}
+                  className="hover:text-white transition-colors"
+                >
+                  {crumb.label}
+                </button>
+              ) : (
+                <span className="text-white font-medium">{crumb.label}</span>
+              )}
+            </span>
+          ))}
+        </nav>
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-[#fcd34d]">{title}</h1>
+          <p className="text-green-100 mt-2 max-w-2xl mx-auto">{subtitle}</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ============ RENDER SECTIONS ============
+
+  // HOME
+  const renderHome = () => (
+    <>
+      {/* Hero Carousel */}
+      <section className="relative w-full">
+        {carouselSlides.length > 0 ? (
+          <Carousel
+            opts={{ loop: true, align: "start" }}
+            setApi={setCarouselApi}
+            className="w-full"
+          >
+            <CarouselContent>
+              {carouselSlides.map((slide, index) => (
+                <CarouselItem key={slide.id}>
+                  <div className="relative w-full h-64 sm:h-80 md:h-[28rem] lg:h-[32rem] bg-black overflow-hidden">
+                    {slide.image && (
+                      <img
+                        src={slide.image}
+                        alt={slide.title}
+                        className={`w-full h-full object-cover ${index === 1 ? "object-top" : "object-center"}`}
+                      />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+                    <div className="absolute bottom-4 left-4 sm:left-6 right-4 sm:right-6 text-white">
+                      <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-1 drop-shadow-lg">
+                        {slide.title}
+                      </h2>
+                      {slide.subtitle && (
+                        <p className="text-xs sm:text-sm md:text-base text-gray-200 mb-2 drop-shadow-md line-clamp-2">
+                          {slide.subtitle}
+                        </p>
+                      )}
+                      {slide.link && slide.linkText && (
+                        <Button className="bg-green-600 hover:bg-green-700 text-white text-sm sm:text-base">
+                          {slide.linkText}
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious className="left-4 bg-black/50 text-white border-none hover:bg-black/70" />
+            <CarouselNext className="right-4 bg-black/50 text-white border-none hover:bg-black/70" />
+          </Carousel>
+        ) : (
+          <div className="w-full h-48 sm:h-56 md:h-72 bg-gradient-to-br from-green-600 to-green-800 flex items-center justify-center">
+            <div className="text-white text-center">
+              <h2 className="text-4xl md:text-5xl font-bold mb-2">Bienvenido a LCF</h2>
+              <p className="text-xl text-green-100">La mejor liga de fútbol</p>
+            </div>
+          </div>
+        )}
+        {carouselSlides.length > 1 && (
+          <div className="flex justify-center gap-2 py-4 bg-gradient-to-r from-green-700 to-green-600">
+            {carouselSlides.map((_, index) => (
+              <button
+                key={index}
+                className={`w-3 h-3 rounded-full transition-colors ${
+                  carouselCurrent === index ? "bg-[#fcd34d]" : "bg-white"
+                }`}
+                onClick={() => carouselApi?.scrollTo(index)}
+                aria-label={`Ir a slide ${index + 1}`}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Sponsors Section */}
+      <section className="w-full py-6 bg-gradient-to-br from-green-600 to-green-800 text-white relative z-10 overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/5 before:to-transparent before:pointer-events-none">
+        <div className="px-4">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-[#fbbf24]">Nuestros Patrocinadores</h2>
+          </div>
+          {sponsors.length > 0 ? (
+            <div className="relative">
+              <div className="overflow-hidden py-2">
+                <div
+                  className="flex will-change-transform"
+                  style={{ animation: "scrollCarousel 5s linear infinite" }}
+                >
+                  {[...sponsors, ...sponsors].map((sponsor, index) => (
+                    <div
+                      key={`${sponsor.id}-${index}`}
+                      className="flex-shrink-0 flex items-center justify-center hover:scale-110 transition-transform p-2 px-6"
+                    >
+                      {sponsor.logo ? (
+                        <div className="w-28 h-28 md:w-36 md:h-36 rounded-full bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300 flex items-center justify-center shadow-xl overflow-hidden border border-gray-300/60 relative before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/70 before:via-gray-100/30 before:to-transparent before:rounded-full before:pointer-events-none after:absolute after:inset-0 after:bg-gradient-to-tl after:from-transparent after:via-transparent after:to-white/40 after:rounded-full after:pointer-events-none">
+                          <img
+                            src={sponsor.logo}
+                            alt={sponsor.name}
+                            className={`w-full h-full relative z-10 mix-blend-multiply ${["chec", "brilla", "emas", "efigas"].some((name) => sponsor.name.toLowerCase().includes(name)) ? "object-contain p-2" : "object-cover"}`}
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-28 h-28 md:w-36 md:h-36 rounded-full bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300 flex items-center justify-center shadow-xl border border-gray-300/60 relative before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/70 before:via-gray-100/30 before:to-transparent before:rounded-full before:pointer-events-none after:absolute after:inset-0 after:bg-gradient-to-tl after:from-transparent after:via-transparent after:to-white/40 after:rounded-full after:pointer-events-none">
+                          <span className="text-green-700 font-bold text-sm md:text-base text-center px-2 relative z-10">
+                            {sponsor.name}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <Users className="h-12 w-12 text-green-200 mx-auto mb-3" />
+              <p className="text-green-100">Pronto anunciaremos nuestros patrocinadores</p>
+            </div>
+          )}
+        </div>
+        <style jsx global>{`
+          @keyframes scrollCarousel {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+          }
+        `}</style>
+      </section>
+
+      {/* Tournaments Section */}
+      <section className="bg-gradient-to-br from-green-600 to-green-800 py-12 text-white relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/5 before:to-transparent before:pointer-events-none">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-[#fbbf24]">Nuestros Torneos</h2>
+          </div>
+          {tournaments.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+              {tournaments
+                .filter((t) => t.image)
+                .slice(0, 3)
+                .map((tournament) => (
+                  <div key={tournament.id} className="group flex flex-col items-center">
+                    <div
+                      className="relative overflow-hidden border-2 border-white rounded-lg cursor-pointer flex-1 w-full min-h-[450px]"
+                      onClick={() =>
+                        tournament.image &&
+                        setSelectedImage({ src: tournament.image, alt: tournament.name })
+                      }
+                    >
+                      {tournament.image ? (
+                        <img
+                          src={tournament.image}
+                          alt={tournament.name}
+                          className="absolute inset-0 w-full h-full object-fill group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center rounded-lg">
+                          <Trophy className="h-12 w-12 text-white/50" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="py-2 text-center">
+                      <Badge
+                        className={`shadow-sm ${tournament.status === "active" ? "bg-gradient-to-r from-green-500 to-green-600" : tournament.status === "upcoming" ? "bg-gradient-to-r from-blue-500 to-blue-600" : "bg-gradient-to-r from-gray-400 to-gray-500"} text-white border-0`}
+                      >
+                        {tournament.status === "active"
+                          ? "Activo"
+                          : tournament.status === "upcoming"
+                            ? "Próximo"
+                            : "Finalizado"}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-white/10 rounded-xl">
+              <Trophy className="h-16 w-16 text-green-200 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold">No hay torneos activos</h3>
+              <p className="text-green-100 mt-2">Pronto publicaremos nuevos torneos</p>
+            </div>
+          )}
+          <div className="text-center mt-6">
+            <Button
+              onClick={() => navigateTo("torneos")}
+              variant="outline"
+              className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+            >
+              Ver todos los torneos
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Info Cards / News Section */}
+      <section className="bg-gradient-to-br from-green-600 to-green-800 py-16 text-white relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/5 before:to-transparent before:pointer-events-none">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-[#fbbf24] mb-3">Noticias Recientes</h2>
+            <p className="text-green-100 text-lg max-w-2xl mx-auto">Mantente informado sobre las últimas novedades de nuestra liga</p>
+          </div>
+          {infoCards.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+              {infoCards.slice(0, 3).map((card, index) => {
+                const colorSchemes = [
+                  { gradient: "from-emerald-400 to-green-600", accent: "text-emerald-600", bg: "bg-emerald-50" },
+                  { gradient: "from-amber-400 to-orange-500", accent: "text-amber-600", bg: "bg-amber-50" },
+                  { gradient: "from-blue-400 to-indigo-600", accent: "text-blue-600", bg: "bg-blue-50" },
+                ];
+                const colors = colorSchemes[index % colorSchemes.length];
+                return (
+                  <div key={card.id} className="group relative">
+                    <div className="bg-white rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-3 relative">
+                      {card.image ? (
+                        <div className="relative h-28 overflow-hidden">
+                          <img src={card.image} alt={card.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                          <div className={`absolute inset-0 bg-gradient-to-t ${colors.gradient} opacity-20`}></div>
+                        </div>
+                      ) : (
+                        <div className={`h-28 bg-gradient-to-br ${colors.gradient} flex items-center justify-center`}>
+                          <Trophy className="h-12 w-12 text-white/50" />
+                        </div>
+                      )}
+                      <div className={`h-2 bg-gradient-to-r ${colors.gradient}`}></div>
+                      <div className="p-6 relative">
+                        <span className={`absolute top-4 right-4 text-4xl font-black ${colors.bg} ${colors.accent} opacity-20`}>
+                          0{index + 1}
+                        </span>
+                        <h3 className="text-xl font-bold mb-3 text-gray-800 group-hover:text-green-700 transition-colors leading-tight line-clamp-2">
+                          {card.title}
+                        </h3>
+                        {card.description && (
+                          <p className="text-gray-600 text-sm leading-relaxed line-clamp-3">{card.description}</p>
+                        )}
+                      </div>
+                      <div className={`absolute bottom-0 right-0 w-24 h-24 bg-gradient-to-tl ${colors.gradient} opacity-5 rounded-tl-full`}></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-white/10 rounded-xl">
+              <Trophy className="h-16 w-16 text-green-200 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold">No hay información disponible</h3>
+            </div>
+          )}
+          <div className="text-center mt-6">
+            <Button
+              onClick={() => navigateTo("noticias")}
+              variant="outline"
+              className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+            >
+              Ver todas las noticias
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Events Section */}
+      <section className="bg-gradient-to-br from-green-600 to-green-800 py-12 text-white relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/5 before:to-transparent before:pointer-events-none">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-[#fbbf24]">Próximos Eventos</h2>
+          </div>
+          {events.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+              {events.slice(0, 3).map((event, index) => {
+                const gradientClass = getGradientClass(index);
+                return (
+                  <div
+                    key={event.id}
+                    className="group relative bg-white rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 flex flex-col h-full"
+                  >
+                    <div className="p-6 flex-grow">
+                      <div className="flex items-center justify-between mb-4">
+                        {event.eventType && (
+                          <Badge className={`bg-gradient-to-r ${gradientClass} text-white border-0 shadow-sm`}>
+                            {event.eventType}
+                          </Badge>
+                        )}
+                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${gradientClass} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300`}>
+                          <Calendar className="h-5 w-5 text-white" />
+                        </div>
+                      </div>
+                      <h3 className="text-xl font-bold mb-3 text-gray-800 group-hover:text-green-700 transition-colors">
+                        {event.title}
+                      </h3>
+                      <p className="text-gray-600 text-sm leading-relaxed line-clamp-2 mb-4">
+                        {event.description}
+                      </p>
+                      <div className="space-y-2 pt-4 border-t border-gray-100">
+                        {event.date && (
+                          <div className="flex items-center text-gray-600 text-sm">
+                            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${gradientClass} bg-opacity-10 flex items-center justify-center mr-3`}>
+                              <Clock className="h-4 w-4 text-green-600" />
+                            </div>
+                            <span>{formatDateTime(event.date)}</span>
+                          </div>
+                        )}
+                        {event.location && (
+                          <div className="flex items-center text-gray-600 text-sm">
+                            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${gradientClass} bg-opacity-10 flex items-center justify-center mr-3`}>
+                              <MapPin className="h-4 w-4 text-green-600" />
+                            </div>
+                            <span>{event.location}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div
+                      className="relative overflow-hidden bg-gray-100 h-[400px] mt-auto cursor-pointer"
+                      onClick={() =>
+                        event.image &&
+                        setSelectedImage({ src: event.image, alt: event.title })
+                      }
+                    >
+                      {event.image ? (
+                        <>
+                          <img
+                            src={event.image}
+                            alt={event.title}
+                            className="w-full h-full object-fill group-hover:scale-105 transition-transform duration-500"
+                          />
+                          <div className={`absolute inset-0 bg-gradient-to-t ${gradientClass} opacity-10 pointer-events-none`}></div>
+                        </>
+                      ) : (
+                        <div className={`w-full h-full bg-gradient-to-br ${gradientClass} flex items-center justify-center`}>
+                          <Calendar className="h-16 w-16 text-white/50" />
+                        </div>
+                      )}
+                    </div>
+                    <div className={`absolute bottom-0 right-0 w-24 h-24 bg-gradient-to-tl ${gradientClass} opacity-10 rounded-tl-full pointer-events-none`}></div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-white/10 rounded-xl">
+              <Calendar className="h-16 w-16 text-green-200 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold">No hay eventos próximos</h3>
+            </div>
+          )}
+          <div className="text-center mt-6">
+            <Button
+              onClick={() => navigateTo("eventos")}
+              variant="outline"
+              className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+            >
+              Ver todos los eventos
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Gallery Section */}
+      <section className="bg-gradient-to-br from-green-600 to-green-800 py-12 text-white relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/5 before:to-transparent before:pointer-events-none">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-[#fbbf24]">Galería</h2>
+          </div>
+        </div>
+        {gallery.length > 0 ? (
+          <div className="relative w-full overflow-hidden">
+            <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-green-600 to-transparent z-10 pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-green-600 to-transparent z-10 pointer-events-none" />
+            <div className="overflow-hidden py-4">
+              <div
+                className="flex gap-6"
+                style={{ animation: "scrollGallery 30s linear infinite" }}
+              >
+                {[...gallery, ...gallery].map((item, index) => (
+                  <div
+                    key={`${item.id}-${index}`}
+                    className="flex-shrink-0 relative group overflow-hidden rounded-xl shadow-xl min-w-[350px] h-64"
+                  >
+                    <img
+                      src={item.image}
+                      alt={item.title || "Galería"}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-300 flex items-center justify-center">
+                      <p className="text-white text-sm text-center px-4 opacity-0 group-hover:opacity-100 transition-opacity font-medium">
+                        {item.title}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="container mx-auto px-4">
+            <div className="text-center py-12 bg-white/10 rounded-xl">
+              <ImageIcon className="h-16 w-16 text-green-200 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold">No hay imágenes</h3>
+            </div>
+          </div>
+        )}
+        <style jsx global>{`
+          @keyframes scrollGallery {
+            0% { transform: translateX(-50%); }
+            100% { transform: translateX(0); }
+          }
+        `}</style>
+      </section>
+    </>
+  );
+
+  // TORNEOS
+  const renderTorneos = () => (
+    <>
+      {renderPageHeader("Torneos", "Todos los torneos de la Liga Caldense de Fútbol")}
+      <div className="container mx-auto px-4 py-8">
+        {/* Filter */}
+        <div className="bg-white rounded-xl shadow-md p-4 mb-6 flex items-center gap-4 flex-wrap">
+          <Filter className="h-5 w-5 text-green-600" />
+          <span className="font-medium text-gray-700">Filtrar por estado:</span>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Todos los estados" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="active">Activos</SelectItem>
+              <SelectItem value="upcoming">Próximos</SelectItem>
+              <SelectItem value="finished">Finalizados</SelectItem>
+            </SelectContent>
+          </Select>
+          {statusFilter !== "all" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setStatusFilter("all")}
+              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+            >
+              Limpiar filtro
+            </Button>
+          )}
+        </div>
+
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {[...Array(8)].map((_, i) => (
+              <Card key={i} className="overflow-hidden animate-pulse">
+                <div className="h-[450px] bg-gray-200"></div>
+                <div className="p-3 bg-gray-100">
+                  <div className="h-4 bg-gray-300 rounded w-16 mx-auto"></div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : filteredTournaments.length > 0 ? (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {filteredTournaments.map((tournament) => (
+                <Card
+                  key={tournament.id}
+                  className="group overflow-hidden hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-green-500"
+                >
+                  <CardContent className="p-0">
+                    <div className="h-[450px] bg-gray-100 overflow-hidden">
+                      {tournament.image ? (
+                        <img
+                          src={tournament.image}
+                          alt={tournament.name}
+                          className="w-full h-full object-fill group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
+                          <ImageIcon className="h-16 w-16 text-white/40" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-3 bg-white border-t flex justify-center">
+                      <Badge className={`${tournament.status === "active" ? "bg-green-500" : tournament.status === "upcoming" ? "bg-blue-500" : "bg-gray-400"} text-white border-0`}>
+                        {tournament.status === "active" ? "Activo" : tournament.status === "upcoming" ? "Próximo" : "Finalizado"}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            <p className="mt-6 text-center text-gray-500 text-sm">
+              Mostrando {filteredTournaments.length} {filteredTournaments.length === 1 ? "torneo" : "torneos"}
+            </p>
+          </>
+        ) : (
+          <div className="text-center py-16 bg-white rounded-xl shadow-md">
+            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-green-100 to-green-200 rounded-full flex items-center justify-center">
+              <Trophy className="h-12 w-12 text-green-400" />
+            </div>
+            <h3 className="text-2xl font-semibold text-gray-700 mb-2">No hay torneos disponibles</h3>
+            <p className="text-gray-500 mb-4">{statusFilter !== "all" ? "No se encontraron torneos con el filtro seleccionado." : "Pronto publicaremos nuevos torneos."}</p>
+            {statusFilter !== "all" && (
+              <Button variant="outline" className="border-green-600 text-green-700 hover:bg-green-50" onClick={() => setStatusFilter("all")}>
+                Limpiar filtro
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+    </>
+  );
+
+  // PROGRAMACIÓN
+  const renderProgramacion = () => (
+    <>
+      {renderPageHeader("Programación de Partidos", "Calendario oficial de encuentros deportivos")}
+      {scheduleFiles.length > 1 && (
+        <div className="bg-white border-b shadow-sm">
+          <div className="container mx-auto px-4 py-3 flex justify-center">
+            <Button
+              variant="outline"
+              className="bg-green-50 border-green-300 text-green-700 hover:bg-green-100"
+              onClick={() => setShowScheduleList(!showScheduleList)}
+            >
+              <FolderOpen className="h-4 w-4 mr-2" />
+              Documentos ({scheduleFiles.length})
+              <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${showScheduleList ? "rotate-180" : ""}`} />
+            </Button>
+          </div>
+        </div>
+      )}
+      {showScheduleList && scheduleFiles.length > 0 && (
+        <div className="bg-white border-b shadow-sm">
+          <div className="container mx-auto px-4 py-4">
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input placeholder="Buscar documentos..." value={scheduleSearch} onChange={(e) => setScheduleSearch(e.target.value)} className="pl-10" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-h-64 overflow-y-auto">
+              {filteredScheduleFiles.map((file) => (
+                <button
+                  key={file.id}
+                  onClick={() => { setSelectedScheduleFile(file); setShowScheduleList(false); }}
+                  className={`p-3 rounded-lg border-2 text-left transition-all ${selectedScheduleFile?.id === file.id ? "border-red-500 bg-red-50" : "border-gray-200 hover:border-red-300 hover:bg-gray-50"}`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <FileText className="h-4 w-4 text-red-500" />
+                    <Badge className="bg-red-100 text-red-700 text-xs">PDF</Badge>
+                  </div>
+                  <span className="font-medium text-sm truncate block">{file.name}</span>
+                  <span className="text-xs text-gray-500">{file.fileName}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      <main className="flex-grow container mx-auto px-4 py-6">
+        {scheduleLoading ? (
+          <Card><CardContent className="p-6"><div className="animate-pulse space-y-4"><div className="h-8 bg-gray-200 rounded w-1/4"></div><div className="h-64 bg-gray-200 rounded"></div></div></CardContent></Card>
+        ) : selectedScheduleFile ? (
+          <div className="space-y-4">
+            <Card className="border-l-4 border-l-red-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                      <FileText className="h-6 w-6 text-red-600" />
+                    </div>
+                    <div>
+                      <h2 className="font-bold text-lg text-gray-800">{selectedScheduleFile.name}</h2>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge className="bg-red-100 text-red-700">PDF</Badge>
+                        <span className="text-sm text-gray-500">{selectedScheduleFile.fileName}</span>
+                        <span className="text-sm text-gray-400">•</span>
+                        <span className="text-sm text-gray-500">{formatDate(selectedScheduleFile.createdAt)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  {selectedScheduleFile.fileData && (
+                    <Button variant="outline" className="border-red-500 text-red-600 hover:bg-red-50" onClick={() => handleDownload(selectedScheduleFile.fileData!, selectedScheduleFile.fileName)}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Descargar PDF
+                    </Button>
+                  )}
+                </div>
+                {selectedScheduleFile.description && <p className="mt-3 text-gray-600 text-sm">{selectedScheduleFile.description}</p>}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                {scheduleBlobUrl ? (
+                  <div className="rounded-lg border border-gray-200 overflow-hidden bg-gray-100">
+                    <iframe src={scheduleBlobUrl} className="w-full h-[75vh]" title={selectedScheduleFile.name} />
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">Cargando documento...</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <Card className="max-w-lg mx-auto">
+            <CardContent className="p-12 text-center">
+              <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-600 mb-2">No hay programación disponible</h3>
+              <p className="text-gray-500">Pronto se publicarán los calendarios de partidos.</p>
+            </CardContent>
+          </Card>
+        )}
+      </main>
+    </>
+  );
+
+  // ESTADÍSTICAS
+  const renderEstadisticas = () => (
+    <>
+      {renderPageHeader("Estadísticas", "Tablas de posiciones, goleadores y rendimiento de los torneos", [
+        { label: "Programación", section: "programacion" },
+        { label: "Estadísticas" },
+      ])}
+      {statsFiles.length > 1 && (
+        <div className="bg-white border-b shadow-sm">
+          <div className="container mx-auto px-4 py-3 flex justify-center">
+            <Button variant="outline" className="bg-green-50 border-green-300 text-green-700 hover:bg-green-100" onClick={() => setShowStatsList(!showStatsList)}>
+              <FolderOpen className="h-4 w-4 mr-2" />
+              Documentos ({statsFiles.length})
+              <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${showStatsList ? "rotate-180" : ""}`} />
+            </Button>
+          </div>
+        </div>
+      )}
+      {showStatsList && statsFiles.length > 0 && (
+        <div className="bg-white border-b shadow-sm">
+          <div className="container mx-auto px-4 py-4">
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input placeholder="Buscar documentos..." value={statsSearch} onChange={(e) => setStatsSearch(e.target.value)} className="pl-10" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-h-64 overflow-y-auto">
+              {filteredStatsFiles.map((file) => (
+                <button
+                  key={file.id}
+                  onClick={() => { setSelectedStatsFile(file); setShowStatsList(false); }}
+                  className={`p-3 rounded-lg border-2 text-left transition-all ${selectedStatsFile?.id === file.id ? "border-amber-500 bg-amber-50" : "border-gray-200 hover:border-amber-300 hover:bg-gray-50"}`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <FileText className="h-4 w-4 text-amber-500" />
+                    <Badge className="bg-amber-100 text-amber-700 text-xs">PDF</Badge>
+                  </div>
+                  <span className="font-medium text-sm truncate block">{file.name}</span>
+                  <span className="text-xs text-gray-500">{file.fileName}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      <main className="flex-grow container mx-auto px-4 py-6">
+        {statsLoading ? (
+          <Card><CardContent className="p-6"><div className="animate-pulse space-y-4"><div className="h-8 bg-gray-200 rounded w-1/4"></div><div className="h-64 bg-gray-200 rounded"></div></div></CardContent></Card>
+        ) : selectedStatsFile ? (
+          <div className="space-y-4">
+            <Card className="border-l-4 border-l-amber-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center">
+                      <FileText className="h-6 w-6 text-amber-600" />
+                    </div>
+                    <div>
+                      <h2 className="font-bold text-lg text-gray-800">{selectedStatsFile.name}</h2>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge className="bg-amber-100 text-amber-700">PDF</Badge>
+                        <span className="text-sm text-gray-500">{selectedStatsFile.fileName}</span>
+                        <span className="text-sm text-gray-400">•</span>
+                        <span className="text-sm text-gray-500">{formatDate(selectedStatsFile.createdAt)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  {selectedStatsFile.fileData && (
+                    <Button variant="outline" className="border-amber-500 text-amber-600 hover:bg-amber-50" onClick={() => handleDownload(selectedStatsFile.fileData!, selectedStatsFile.fileName)}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Descargar PDF
+                    </Button>
+                  )}
+                </div>
+                {selectedStatsFile.description && <p className="mt-3 text-gray-600 text-sm">{selectedStatsFile.description}</p>}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                {statsBlobUrl ? (
+                  <div className="rounded-lg border border-gray-200 overflow-hidden bg-gray-100">
+                    <iframe src={statsBlobUrl} className="w-full h-[75vh]" title={selectedStatsFile.name} />
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">Cargando documento...</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <Card className="max-w-lg mx-auto">
+            <CardContent className="p-12 text-center">
+              <BarChart3 className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-600 mb-2">No hay archivos de estadísticas</h3>
+              <p className="text-gray-500">Los archivos de estadísticas se mostrarán aquí cuando estén disponibles.</p>
+            </CardContent>
+          </Card>
+        )}
+      </main>
+    </>
+  );
+
+  // RESOLUCIONES
+  const renderResoluciones = () => (
+    <>
+      {renderPageHeader("Resoluciones", "Documentos oficiales, circulares y comunicados", [
+        { label: "Programación", section: "programacion" },
+        { label: "Resoluciones" },
+      ])}
+      {resolutions.length > 1 && (
+        <div className="bg-white border-b shadow-sm">
+          <div className="container mx-auto px-4 py-3 flex justify-center">
+            <Button variant="outline" className="bg-green-50 border-green-300 text-green-700 hover:bg-green-100" onClick={() => setShowResolutionsList(!showResolutionsList)}>
+              <FolderOpen className="h-4 w-4 mr-2" />
+              Documentos ({resolutions.length})
+              <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${showResolutionsList ? "rotate-180" : ""}`} />
+            </Button>
+          </div>
+        </div>
+      )}
+      {showResolutionsList && resolutions.length > 0 && (
+        <div className="bg-white border-b shadow-sm">
+          <div className="container mx-auto px-4 py-4">
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input placeholder="Buscar documentos..." value={resolutionsSearch} onChange={(e) => setResolutionsSearch(e.target.value)} className="pl-10" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-h-64 overflow-y-auto">
+              {filteredResolutions.map((res) => (
+                <button
+                  key={res.id}
+                  onClick={() => { setSelectedResolution(res); setShowResolutionsList(false); }}
+                  className={`p-3 rounded-lg border-2 text-left transition-all ${selectedResolution?.id === res.id ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"}`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <FileText className="h-4 w-4 text-blue-500" />
+                    <Badge className={`${getTypeColor(res.type)} text-xs`}>{getTypeLabel(res.type)}</Badge>
+                  </div>
+                  <span className="font-medium text-sm truncate block">{res.title}</span>
+                  <span className="text-xs text-gray-500">{res.number}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      <main className="flex-grow container mx-auto px-4 py-6">
+        {resolutionsLoading ? (
+          <Card><CardContent className="p-6"><div className="animate-pulse space-y-4"><div className="h-8 bg-gray-200 rounded w-1/4"></div><div className="h-64 bg-gray-200 rounded"></div></div></CardContent></Card>
+        ) : selectedResolution ? (
+          <div className="space-y-4">
+            <Card className="border-l-4 border-l-blue-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <FileText className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <h2 className="font-bold text-lg text-gray-800">{selectedResolution.title}</h2>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge className={getTypeColor(selectedResolution.type)}>{getTypeLabel(selectedResolution.type)}</Badge>
+                        <span className="text-sm text-gray-500">{selectedResolution.number}</span>
+                        <span className="text-sm text-gray-400">•</span>
+                        <span className="text-sm text-gray-500">{formatDate(selectedResolution.date)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  {selectedResolution.fileData && (
+                    <Button variant="outline" className="border-blue-500 text-blue-600 hover:bg-blue-50" onClick={() => handleDownload(selectedResolution.fileData!, selectedResolution.fileName || `${selectedResolution.title}.pdf`)}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Descargar PDF
+                    </Button>
+                  )}
+                </div>
+                {selectedResolution.description && <p className="mt-3 text-gray-600 text-sm">{selectedResolution.description}</p>}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                {selectedResolution.fileData ? (
+                  <div className="rounded-lg border border-gray-200 overflow-hidden">
+                    <iframe src={selectedResolution.fileData} className="w-full h-[70vh]" title={selectedResolution.title} />
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">Este documento no tiene archivo adjunto</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <Card className="max-w-lg mx-auto">
+            <CardContent className="p-12 text-center">
+              <FolderOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-600 mb-2">No hay resoluciones disponibles</h3>
+              <p className="text-gray-500">Los documentos oficiales se mostrarán aquí cuando estén disponibles.</p>
+            </CardContent>
+          </Card>
+        )}
+      </main>
+    </>
+  );
+
+  // NOTICIAS
+  const renderNoticias = () => (
+    <>
+      {renderPageHeader("Noticias", "Mantente informado sobre las últimas novedades de la Liga Caldense de Fútbol")}
+      <div className="bg-gradient-to-br from-green-600 to-green-800 py-12 text-white relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/5 before:to-transparent before:pointer-events-none">
+        <div className="container mx-auto px-4 relative z-10">
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {[...Array(6)].map((_, index) => (
+                <div key={index} className="group relative bg-white rounded-2xl overflow-hidden shadow-xl">
+                  <div className="h-48 bg-gray-200 animate-pulse"></div>
+                  <div className="h-2 bg-gray-200 animate-pulse"></div>
+                  <div className="p-6">
+                    <div className="h-6 bg-gray-200 rounded animate-pulse mb-2 w-3/4"></div>
+                    <div className="mt-4 h-4 bg-gray-200 rounded animate-pulse w-1/3"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : infoCards.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {visibleNewsCards.map((card, index) => {
+                  const gradientClass = getGradientClass(index);
+                  return (
+                    <div key={card.id} className="group relative bg-white rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
+                      {card.image ? (
+                        <div className="relative h-48 overflow-hidden">
+                          <img src={card.image} alt={card.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                          <div className={`absolute inset-0 bg-gradient-to-t ${gradientClass} opacity-20`}></div>
+                        </div>
+                      ) : (
+                        <div className={`h-48 bg-gradient-to-br ${gradientClass} flex items-center justify-center`}>
+                          <Trophy className="h-16 w-16 text-white/50" />
+                        </div>
+                      )}
+                      <div className={`h-2 bg-gradient-to-r ${gradientClass}`}></div>
+                      <div className="p-6">
+                        <h3 className="text-xl font-bold mb-2 text-gray-800 group-hover:text-green-700 transition-colors line-clamp-2">
+                          {card.title}
+                        </h3>
+                        {card.createdAt && (
+                          <div className="mt-4 flex items-center">
+                            <Badge variant="outline" className="text-xs border-gray-300 text-gray-500">
+                              <Calendar className="h-3 w-3 mr-1" />
+                              {formatDate(card.createdAt)}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                      <div className={`absolute bottom-0 right-0 w-24 h-24 bg-gradient-to-tl ${gradientClass} opacity-10 rounded-tl-full`}></div>
+                    </div>
+                  );
+                })}
+              </div>
+              {hasMoreNews && (
+                <div className="flex justify-center mt-12">
+                  <Button onClick={() => setVisibleCount((p) => p + 6)} size="lg" className="bg-white text-green-700 hover:bg-green-50 font-semibold px-8 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300">
+                    Ver más noticias
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </div>
+              )}
+              <div className="text-center mt-6 text-green-200 text-sm">
+                Mostrando {visibleNewsCards.length} de {infoCards.length} noticias
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-16 bg-white/10 rounded-2xl">
+              <Trophy className="h-20 w-20 text-green-200 mx-auto mb-6" />
+              <h3 className="text-2xl font-semibold mb-3">No hay noticias disponibles</h3>
+              <p className="text-green-200 max-w-md mx-auto">Pronto publicaremos nuevas noticias e información importante sobre la liga.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+
+  // EVENTOS
+  const renderEventos = () => (
+    <>
+      {renderPageHeader("Eventos", "Mantente informado sobre todos los eventos de la Liga Caldense de Fútbol")}
+      <div className="container mx-auto px-4 py-8">
+        {/* Filter */}
+        <div className="flex flex-wrap items-center gap-3 mb-8">
+          <div className="flex items-center gap-2 text-gray-600">
+            <Filter className="h-5 w-5" />
+            <span className="font-medium">Filtrar:</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {eventTypes.map((type) => (
+              <Button
+                key={type.value}
+                variant={eventFilter === type.value ? "default" : "outline"}
+                size="sm"
+                onClick={() => setEventFilter(type.value)}
+                className={eventFilter === type.value ? "bg-green-600 hover:bg-green-700 text-white" : "border-green-600 text-green-600 hover:bg-green-50"}
+              >
+                {type.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i} className="overflow-hidden animate-pulse">
+                <div className="h-2 bg-gray-200"></div>
+                <CardContent className="p-6">
+                  <div className="h-6 w-20 bg-gray-200 rounded mb-4"></div>
+                  <div className="h-6 w-3/4 bg-gray-200 rounded mb-3"></div>
+                  <div className="space-y-2 mb-4"><div className="h-4 w-full bg-gray-200 rounded"></div><div className="h-4 w-2/3 bg-gray-200 rounded"></div></div>
+                  <div className="h-[400px] bg-gray-200 rounded"></div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : filteredEvents.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+              {filteredEvents.map((event, index) => {
+                const gradientClass = getEventGradient(event.eventType, index);
+                const badgeColor = getEventBadgeColor(event.eventType);
+                return (
+                  <Card key={event.id} className="group relative bg-white rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 flex flex-col h-full">
+                    <div className={`h-2 bg-gradient-to-r ${gradientClass}`}></div>
+                    <CardContent className="p-6 flex-grow">
+                      <div className="flex items-center justify-between mb-4">
+                        {event.eventType && <Badge className={`${badgeColor} text-white border-0 shadow-sm`}>{event.eventType}</Badge>}
+                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${gradientClass} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300`}>
+                          <Calendar className="h-5 w-5 text-white" />
+                        </div>
+                      </div>
+                      <h3 className="text-xl font-bold mb-3 text-gray-800 group-hover:text-green-700 transition-colors">{event.title}</h3>
+                      <p className="text-gray-600 text-sm leading-relaxed line-clamp-3 mb-4">{event.description}</p>
+                      <div className="space-y-2 pt-4 border-t border-gray-100">
+                        {event.date && (
+                          <div className="flex items-center text-gray-600 text-sm">
+                            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${gradientClass} bg-opacity-10 flex items-center justify-center mr-3`}>
+                              <Clock className="h-4 w-4 text-green-600" />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="font-medium capitalize">{formatDateLong(event.date)}</span>
+                              <span className="text-xs text-gray-500">{formatTime(event.date)}</span>
+                            </div>
+                          </div>
+                        )}
+                        {event.location && (
+                          <div className="flex items-center text-gray-600 text-sm">
+                            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${gradientClass} bg-opacity-10 flex items-center justify-center mr-3`}>
+                              <MapPin className="h-4 w-4 text-green-600" />
+                            </div>
+                            <span>{event.location}</span>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                    <div
+                      className="relative overflow-hidden bg-gray-100 h-[400px] mt-auto cursor-pointer"
+                      onClick={() => event.image && setSelectedImage({ src: event.image, alt: event.title })}
+                    >
+                      {event.image ? (
+                        <><img src={event.image} alt={event.title} className="w-full h-full object-fill group-hover:scale-105 transition-transform duration-500" /><div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/10 pointer-events-none"></div></>
+                      ) : (
+                        <div className={`w-full h-full bg-gradient-to-br ${gradientClass} flex items-center justify-center`}><Calendar className="h-16 w-16 text-white/50" /></div>
+                      )}
+                    </div>
+                    <div className={`absolute bottom-0 right-0 w-24 h-24 bg-gradient-to-tl ${gradientClass} opacity-10 rounded-tl-full pointer-events-none`}></div>
+                  </Card>
+                );
+              })}
+            </div>
+            <div className="text-center mt-8 text-gray-500 text-sm">
+              Mostrando {filteredEvents.length} evento{filteredEvents.length !== 1 ? "s" : ""}
+              {eventFilter !== "all" && ` del tipo "${eventFilter}"`}
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-16 bg-white rounded-2xl shadow-lg">
+            <Calendar className="h-20 w-20 text-gray-300 mx-auto mb-6" />
+            <h3 className="text-2xl font-semibold text-gray-700 mb-2">No hay eventos disponibles</h3>
+            <p className="text-gray-500 max-w-md mx-auto">{eventFilter !== "all" ? `No hay eventos del tipo "${eventFilter}" en este momento.` : "Pronto publicaremos nuevos eventos."}</p>
+          </div>
+        )}
+      </div>
+    </>
+  );
+
+  // NOSOTROS
+  const renderNosotros = () => (
+    <>
+      {renderPageHeader("Conoce Nuestra Historia", "Más de una década promoviendo el fútbol y los valores deportivos en la región caldense.")}
+      <div className="container mx-auto px-4 py-12">
+        {/* Historia */}
+        <section className="mb-16">
+          <Card className="bg-white shadow-xl border-0 overflow-hidden">
+            <CardContent className="p-0">
+              <div className="grid md:grid-cols-2 gap-0">
+                <div className="bg-gradient-to-br from-green-600 to-green-800 p-8 md:p-12 text-white relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
+                  <div className="relative z-10">
+                    <Goal className="h-16 w-16 mb-6 text-[#fbbf24]" />
+                    <h2 className="text-3xl font-bold mb-4">Nuestra Historia</h2>
+                    <p className="text-green-100">Una tradición de excelencia deportiva que une a la comunidad.</p>
+                  </div>
+                </div>
+                <div className="p-8 md:p-12">
+                  <div className="space-y-4 text-gray-600">
+                    <p className="text-lg leading-relaxed">La <strong className="text-green-700">Liga Caldense de Fútbol (LCF)</strong> nació hace más de una década con el sueño de crear un espacio donde los amantes del fútbol pudieran disfrutar de su pasión de manera organizada y profesional en la región de Caldas.</p>
+                    <p className="leading-relaxed">Desde nuestros inicios, hemos trabajado incansablemente por promover el deporte como herramienta de integración social, reuniendo a comunidades enteras alrededor de la pasión por el fútbol.</p>
+                    <p className="leading-relaxed">A lo largo de los años, hemos formado generaciones de deportistas que llevan en su corazón los valores del respeto, el compromiso y la excelencia.</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Misión y Visión */}
+        <section className="mb-16">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold text-gray-800 mb-2">Misión y <span className="text-green-700">Visión</span></h2>
+            <p className="text-gray-600">Los pilares que guían nuestro camino</p>
+          </div>
+          <div className="grid md:grid-cols-2 gap-8">
+            <Card className="group bg-white shadow-lg hover:shadow-2xl transition-all duration-300 border-0 overflow-hidden">
+              <CardContent className="p-0">
+                <div className="h-2 bg-gradient-to-r from-green-500 to-green-600" />
+                <div className="p-8">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <Target className="h-8 w-8 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-800 mb-4">Nuestra Misión</h3>
+                  <p className="text-gray-600 leading-relaxed">Promover el fútbol como herramienta de integración social, fomentando valores como el trabajo en equipo, el respeto, la disciplina y la sana competencia.</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="group bg-white shadow-lg hover:shadow-2xl transition-all duration-300 border-0 overflow-hidden">
+              <CardContent className="p-0">
+                <div className="h-2 bg-gradient-to-r from-[#fbbf24] to-amber-500" />
+                <div className="p-8">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#fbbf24] to-amber-500 flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <Eye className="h-8 w-8 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-800 mb-4">Nuestra Visión</h3>
+                  <p className="text-gray-600 leading-relaxed">Ser la liga de fútbol más reconocida de la región, formando deportistas íntegros y contribuyendo al desarrollo de comunidades saludables y unidas a través del deporte.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        {/* Valores */}
+        <section className="mb-16">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold text-gray-800 mb-2">Nuestros <span className="text-green-700">Valores</span></h2>
+            <p className="text-gray-600">Los principios que nos definen</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {valores.map((valor, index) => {
+              const IconComp = valor.icon;
+              const gradients = ["from-green-500 to-green-600", "from-[#fbbf24] to-amber-500", "from-blue-500 to-blue-600", "from-purple-500 to-purple-600"];
+              return (
+                <Card key={valor.nombre} className="group bg-white shadow-lg hover:shadow-2xl transition-all duration-300 border-0 overflow-hidden">
+                  <CardContent className="p-6 text-center">
+                    <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${gradients[index % gradients.length]} flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                      <IconComp className="h-7 w-7 text-white" />
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-800 mb-2">{valor.nombre}</h3>
+                    <p className="text-gray-600 text-sm leading-relaxed">{valor.descripcion}</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Autoridades */}
+        <section className="mb-16">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold text-gray-800 mb-2">Nuestras <span className="text-green-700">Autoridades</span></h2>
+            <p className="text-gray-600">El equipo que lidera nuestra institución</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {autoridadesNosotros.map((a, index) => {
+              const IconComp = a.icon;
+              const gradients = ["from-green-500 to-green-600", "from-[#fbbf24] to-amber-500", "from-blue-500 to-blue-600"];
+              return (
+                <Card key={a.cargo} className="group bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-0 overflow-hidden">
+                  <CardContent className="p-0">
+                    <div className={`h-2 bg-gradient-to-r ${gradients[index % gradients.length]}`} />
+                    <div className="pt-8 pb-4 px-6">
+                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 mx-auto mb-4 flex items-center justify-center border-4 border-white shadow-lg group-hover:scale-105 transition-transform duration-300">
+                        <IconComp className="h-10 w-10 text-gray-400" />
+                      </div>
+                      <div className="text-center">
+                        <Badge className={`bg-gradient-to-r ${gradients[index % gradients.length]} text-white border-0 shadow-sm mb-3`}>{a.cargo}</Badge>
+                        <h3 className="text-xl font-bold text-gray-800 mb-2">{a.nombre}</h3>
+                        <p className="text-gray-600 text-sm leading-relaxed">{a.descripcion}</p>
+                      </div>
+                    </div>
+                    <div className={`h-1 bg-gradient-to-r ${gradients[index % gradients.length]} opacity-50`} />
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Stats */}
+        <section className="mb-16">
+          <Card className="bg-gradient-to-r from-green-700 to-green-900 text-white shadow-2xl border-0 overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+            <CardContent className="p-8 md:p-12 relative z-10">
+              <div className="text-center mb-10">
+                <h2 className="text-3xl font-bold mb-2">LCF en <span className="text-[#fbbf24]">Números</span></h2>
+                <p className="text-green-100">Nuestra trayectoria respaldada por resultados</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {[
+                  { number: "45+", label: "Equipos Activos", icon: Users },
+                  { number: "1,200+", label: "Jugadores Registrados", icon: Trophy },
+                  { number: "150+", label: "Torneos Realizados", icon: Award },
+                ].map((stat) => {
+                  const IconComp = stat.icon;
+                  return (
+                    <div key={stat.label} className="text-center group">
+                      <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:bg-white/20 transition-all duration-300">
+                        <IconComp className="h-8 w-8 text-[#fbbf24]" />
+                      </div>
+                      <div className="text-4xl md:text-5xl font-bold text-white mb-2">{stat.number}</div>
+                      <div className="text-green-200 font-medium">{stat.label}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[#fbbf24]/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+          </Card>
+        </section>
+
+        {/* Lema */}
+        <section>
+          <Card className="bg-gradient-to-r from-[#fbbf24] to-amber-500 text-gray-900 shadow-2xl border-0 overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
+            <CardContent className="p-8 md:p-12 relative z-10 text-center">
+              <Sparkles className="h-12 w-12 mx-auto mb-4 text-gray-800" />
+              <blockquote className="text-2xl md:text-3xl font-bold italic mb-4">&quot;Uniendo comunidades a través del fútbol&quot;</blockquote>
+              <p className="text-gray-800 font-medium">— Lema de la Liga Caldense de Fútbol</p>
+            </CardContent>
+          </Card>
+        </section>
+      </div>
+    </>
+  );
+
+  // ORGANIZACIÓN
+  const renderOrganizacion = () => (
+    <>
+      {renderPageHeader("Organización", "Conoce la estructura organizativa y las autoridades de la liga", [
+        { label: "Nosotros", section: "nosotros" },
+        { label: "Organización" },
+      ])}
+      <main className="flex-grow container mx-auto px-4 py-8">
+        {/* Misión y Visión */}
+        <section className="mb-12">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-800">Misión y Visión</h2>
+            <p className="text-gray-600">Los pilares que guían nuestro camino</p>
+          </div>
+          <div className="grid md:grid-cols-2 gap-6">
+            <Card className="border-l-4 border-l-green-500 shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center"><Target className="h-6 w-6 text-green-600" /></div>
+                  <h3 className="text-xl font-bold text-gray-800">Nuestra Misión</h3>
+                </div>
+                <p className="text-gray-600 leading-relaxed">Promover el fútbol como herramienta de integración social, fomentando valores como el trabajo en equipo, el respeto, la disciplina y la sana competencia.</p>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-amber-500 shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center"><Eye className="h-6 w-6 text-amber-600" /></div>
+                  <h3 className="text-xl font-bold text-gray-800">Nuestra Visión</h3>
+                </div>
+                <p className="text-gray-600 leading-relaxed">Ser la liga de fútbol más reconocida de la región, formando deportistas íntegros y contribuyendo al desarrollo de comunidades saludables y unidas a través del deporte.</p>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        {/* Valores */}
+        <section className="mb-12">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-800">Nuestros Valores</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {valores.map((valor, index) => {
+              const IconComp = valor.icon;
+              const colors = ["bg-green-100 text-green-600", "bg-amber-100 text-amber-600", "bg-blue-100 text-blue-600", "bg-purple-100 text-purple-600"];
+              return (
+                <Card key={valor.nombre} className="shadow-lg hover:shadow-xl transition-shadow">
+                  <CardContent className="p-5 text-center">
+                    <div className={`w-12 h-12 rounded-xl ${colors[index % colors.length]} flex items-center justify-center mx-auto mb-3`}>
+                      <IconComp className="h-6 w-6" />
+                    </div>
+                    <h3 className="font-bold text-gray-800 mb-2">{valor.nombre}</h3>
+                    <p className="text-gray-600 text-sm">{valor.descripcion}</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Autoridades */}
+        <section className="mb-12">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-800">Nuestras Autoridades</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {autoridadesOrg.map((a, index) => {
+              const IconComp = a.icon;
+              const colorSets = [
+                { bg: "bg-green-100", text: "text-green-600", badge: "bg-green-600" },
+                { bg: "bg-amber-100", text: "text-amber-600", badge: "bg-amber-600" },
+                { bg: "bg-blue-100", text: "text-blue-600", badge: "bg-blue-600" },
+              ];
+              const cs = colorSets[index % colorSets.length];
+              return (
+                <Card key={a.cargo} className="shadow-lg hover:shadow-xl transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className={`w-14 h-14 rounded-full ${cs.bg} flex items-center justify-center`}>
+                        <IconComp className={`h-7 w-7 ${cs.text}`} />
+                      </div>
+                      <div>
+                        <Badge className={`${cs.badge} text-white mb-1`}>{a.cargo}</Badge>
+                        <h3 className="font-bold text-gray-800">{a.nombre}</h3>
+                      </div>
+                    </div>
+                    <p className="text-gray-600 text-sm">{a.descripcion}</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Estructura */}
+        <section>
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-800">Estructura Organizativa</h2>
+          </div>
+          <Card className="shadow-lg">
+            <CardContent className="p-6">
+              <div className="grid md:grid-cols-3 gap-6">
+                <div className="text-center p-6 bg-green-50 rounded-xl">
+                  <Goal className="h-10 w-10 text-green-600 mx-auto mb-4" />
+                  <h3 className="font-bold text-gray-800 mb-2">Asamblea General</h3>
+                  <p className="text-gray-600 text-sm">Máximo órgano de gobierno</p>
+                </div>
+                <div className="text-center p-6 bg-amber-50 rounded-xl">
+                  <Shield className="h-10 w-10 text-amber-600 mx-auto mb-4" />
+                  <h3 className="font-bold text-gray-800 mb-2">Junta Directiva</h3>
+                  <p className="text-gray-600 text-sm">Órgano de administración</p>
+                </div>
+                {/* Comisiones expandible */}
+                <div className={`text-center p-6 bg-blue-50 rounded-xl cursor-pointer transition-all duration-300`} onClick={() => setComisionesExpanded(!comisionesExpanded)}>
+                  <Users className="h-10 w-10 text-blue-600 mx-auto mb-4" />
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <h3 className="font-bold text-gray-800">Comisiones</h3>
+                    {comisionesExpanded ? <ChevronUp className="h-5 w-5 text-blue-600" /> : <ChevronDown className="h-5 w-5 text-blue-600" />}
+                  </div>
+                  <p className="text-gray-600 text-sm mb-2">Áreas especializadas</p>
+                  <p className="text-blue-600 text-xs font-medium">Click para ver más</p>
+                  {comisionesExpanded && (
+                    <div className="mt-4 grid grid-cols-1 gap-2 text-left animate-in fade-in duration-200">
+                      {comisiones.map((c, i) => (
+                        <div key={i} className="bg-white p-3 rounded-lg shadow-sm border border-blue-100 hover:border-blue-300 transition-colors">
+                          <div className="flex items-start gap-2">
+                            <Scale className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <h4 className="font-semibold text-gray-800 text-sm">{c.nombre}</h4>
+                              <p className="text-gray-500 text-xs mt-0.5">{c.descripcion}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      </main>
+    </>
+  );
+
+  // DOCUMENTOS
+  const renderDocumentos = () => (
+    <>
+      {renderPageHeader("Documentos", "Reglamentos, estatutos, resoluciones y formularios oficiales", [
+        { label: "Nosotros", section: "nosotros" },
+        { label: "Documentos" },
+      ])}
+      <main className="flex-grow container mx-auto px-4 py-6">
+        {/* Search and filter */}
+        <Card className="mb-6 shadow-lg">
+          <CardContent className="p-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Input placeholder="Buscar documentos..." value={docsSearch} onChange={(e) => setDocsSearch(e.target.value)} className="pl-10" />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {documentTypes.map((type) => (
+                  <button key={type} onClick={() => setDocsType(type)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${docsType === type ? "bg-green-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Documents list */}
+        <div className="grid gap-3">
+          {filteredDocuments.length === 0 ? (
+            <Card className="shadow-lg"><CardContent className="p-8 text-center"><File className="h-16 w-16 text-gray-300 mx-auto mb-4" /><p className="text-gray-500">No se encontraron documentos</p></CardContent></Card>
+          ) : (
+            filteredDocuments.map((doc) => (
+              <Card key={doc.id} className="shadow-lg hover:shadow-xl transition-shadow">
+                <CardContent className="p-0">
+                  <div className="flex items-center p-4 gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
+                      <FileText className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <h3 className="font-bold text-gray-800 truncate">{doc.title}</h3>
+                        <Badge className={getDocTypeColor(doc.type)} variant="secondary">{doc.type}</Badge>
+                      </div>
+                      <p className="text-gray-600 text-sm truncate">{doc.description}</p>
+                      <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
+                        <span className="flex items-center"><Calendar className="h-3 w-3 mr-1" />{new Date(doc.date).toLocaleDateString("es-ES", { year: "numeric", month: "short", day: "numeric" })}</span>
+                        {doc.size && <span className="flex items-center"><FileDown className="h-3 w-3 mr-1" />{doc.size}</span>}
+                      </div>
+                    </div>
+                    <button className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex-shrink-0">
+                      <Download className="h-4 w-4" />
+                      <span className="hidden sm:inline">Descargar</span>
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+
+        <div className="mt-8">
+          <Card className="bg-green-50 border border-green-200">
+            <CardContent className="p-4">
+              <div className="text-center">
+                <h3 className="font-bold text-gray-800 mb-1">¿No encuentras lo que buscas?</h3>
+                <p className="text-gray-600 text-sm">Si necesitas un documento que no está en la lista, puedes solicitarlo contactándonos a través de nuestros canales oficiales.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    </>
+  );
+
+  // CLUBES
+  const renderClubes = () => (
+    <>
+      {renderPageHeader("Clubes", "Conoce los clubes afiliados a la Liga Caldense de Fútbol", [
+        { label: "Nosotros", section: "nosotros" },
+        { label: "Clubes" },
+      ])}
+      <main className="flex-grow container mx-auto px-4 py-6">
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <Card className="shadow-lg"><CardContent className="p-4 text-center"><Shield className="h-8 w-8 text-green-600 mx-auto mb-2" /><div className="text-2xl font-bold text-gray-800">{sampleClubs.length}</div><div className="text-sm text-gray-600">Clubes Activos</div></CardContent></Card>
+          <Card className="shadow-lg"><CardContent className="p-4 text-center"><Users className="h-8 w-8 text-blue-600 mx-auto mb-2" /><div className="text-2xl font-bold text-gray-800">{sampleClubs.reduce((a, c) => a + c.players, 0)}+</div><div className="text-sm text-gray-600">Jugadores</div></CardContent></Card>
+          <Card className="shadow-lg"><CardContent className="p-4 text-center"><Trophy className="h-8 w-8 text-amber-600 mx-auto mb-2" /><div className="text-2xl font-bold text-gray-800">{sampleClubs.reduce((a, c) => a + c.trophies, 0)}+</div><div className="text-sm text-gray-600">Títulos</div></CardContent></Card>
+          <Card className="shadow-lg"><CardContent className="p-4 text-center"><MapPin className="h-8 w-8 text-purple-600 mx-auto mb-2" /><div className="text-2xl font-bold text-gray-800">{new Set(sampleClubs.map((c) => c.location)).size}</div><div className="text-sm text-gray-600">Municipios</div></CardContent></Card>
+        </div>
+
+        {/* Search and filter */}
+        <Card className="mb-6 shadow-lg">
+          <CardContent className="p-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Input placeholder="Buscar clubes por nombre o municipio..." value={clubsSearch} onChange={(e) => setClubsSearch(e.target.value)} className="pl-10" />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {clubCategories.map((cat) => (
+                  <button key={cat} onClick={() => setClubsCategory(cat)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${clubsCategory === cat ? "bg-green-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Clubs grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredClubList.length === 0 ? (
+            <div className="col-span-full">
+              <Card className="shadow-lg"><CardContent className="p-8 text-center"><Shield className="h-16 w-16 text-gray-300 mx-auto mb-4" /><p className="text-gray-500">No se encontraron clubes</p></CardContent></Card>
+            </div>
+          ) : (
+            filteredClubList.map((club) => (
+              <Card key={club.id} className="shadow-lg hover:shadow-xl transition-shadow overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="h-2 flex">
+                    <div className="flex-1" style={{ backgroundColor: club.colors[0] }} />
+                    <div className="flex-1" style={{ backgroundColor: club.colors[1] || "#ffffff" }} />
+                  </div>
+                  <div className="p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0"><Shield className="h-5 w-5 text-green-600" /></div>
+                      <Badge className={getClubCategoryColor(club.category)} variant="secondary">{club.category}</Badge>
+                    </div>
+                    <h3 className="font-bold text-gray-800 mb-2 line-clamp-2">{club.name}</h3>
+                    <div className="space-y-1 text-sm text-gray-600 mb-3">
+                      <div className="flex items-center gap-2"><MapPin className="h-3 w-3 text-gray-400" /><span>{club.location}</span></div>
+                      <div className="flex items-center gap-2"><Calendar className="h-3 w-3 text-gray-400" /><span>Fundado en {club.founded}</span></div>
+                    </div>
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                      <div className="flex items-center gap-1 text-xs"><Users className="h-3 w-3 text-blue-500" /><span className="text-gray-600">{club.players} jugadores</span></div>
+                      <div className="flex items-center gap-1 text-xs"><Trophy className="h-3 w-3 text-amber-500" /><span className="text-gray-600">{club.trophies} títulos</span></div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      </main>
+    </>
+  );
+
+  // ============ SECTION RENDERER ============
+  const renderSection = () => {
+    switch (currentSection) {
+      case "home": return renderHome();
+      case "torneos": return renderTorneos();
+      case "programacion": return renderProgramacion();
+      case "estadisticas": return renderEstadisticas();
+      case "resoluciones": return renderResoluciones();
+      case "noticias": return renderNoticias();
+      case "eventos": return renderEventos();
+      case "nosotros": return renderNosotros();
+      case "organizacion": return renderOrganizacion();
+      case "documentos": return renderDocumentos();
+      case "clubes": return renderClubes();
+      default: return renderHome();
+    }
+  };
+
+  // ============ MAIN RENDER ============
+  return (
+    <div className="flex flex-col min-h-screen">
+      {/* Navigation Bar */}
+      <nav className="text-white sticky top-0 z-50 shadow-lg bg-gradient-to-b from-green-800 to-green-900">
+        <div className="container mx-auto flex items-center justify-between px-4 py-3">
+          <button
+            onClick={() => navigateTo("home")}
+            className="flex items-center gap-3"
+          >
+            <img src={LCF_LOGO} alt="LCF Logo" className="w-12 h-12 rounded-lg object-contain" />
+            <span className="text-xl font-bold tracking-wide hidden sm:block">Liga Caldense de Fútbol</span>
+          </button>
+
+          {/* Desktop Nav */}
+          <div className="hidden lg:flex space-x-8">
+            {navItems.map((item) =>
+              item.subitems ? (
+                <DropdownMenu key={item.label}>
+                  <DropdownMenuTrigger
+                    className={`flex items-center text-lg font-medium hover:text-green-200 transition-colors outline-none ${isActive(item.section) || item.subitems.some((s) => isActive(s.section)) ? "text-[#fcd34d]" : ""}`}
+                  >
+                    <span>{item.label}</span>
+                    <ChevronDown className="ml-1 h-4 w-4" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="bg-green-800 border-green-700 text-white pt-4 mt-1">
+                    {item.subitems.map((subitem) => (
+                      <DropdownMenuItem key={subitem.label} onClick={() => navigateTo(subitem.section)} className={`cursor-pointer hover:bg-green-700 focus:bg-green-700 ${isActive(subitem.section) ? "bg-green-700 text-[#fcd34d]" : ""}`}>
+                        {subitem.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <button
+                  key={item.label}
+                  onClick={() => navigateTo(item.section)}
+                  className={`flex items-center text-lg font-medium hover:text-green-200 transition-colors ${isActive(item.section) ? "text-[#fcd34d]" : ""}`}
+                >
+                  <span>{item.label}</span>
+                </button>
+              )
+            )}
+          </div>
+
+          {/* Mobile Menu Button */}
+          <div className="flex items-center gap-2">
+            <button
+              className="lg:hidden p-2 hover:bg-green-800 rounded-lg transition-colors"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden bg-green-800 border-t border-green-700">
+            <div className="container mx-auto px-4 py-4 space-y-2">
+              {navItems.map((item) =>
+                item.subitems ? (
+                  <div key={item.label} className="space-y-1">
+                    <span className="block py-2 px-3 text-green-200 font-medium">{item.label}</span>
+                    {item.subitems.map((subitem) => (
+                      <button
+                        key={subitem.label}
+                        onClick={() => navigateTo(subitem.section)}
+                        className={`flex items-center py-2 px-6 rounded-lg hover:bg-green-700 transition-colors w-full text-left ${isActive(subitem.section) ? "bg-green-700 text-[#fcd34d]" : ""}`}
+                      >
+                        {subitem.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <button
+                    key={item.label}
+                    onClick={() => navigateTo(item.section)}
+                    className={`flex items-center py-2 px-3 rounded-lg hover:bg-green-700 transition-colors w-full text-left ${isActive(item.section) ? "bg-green-700 text-[#fcd34d]" : ""}`}
+                  >
+                    {item.label}
+                  </button>
+                )
+              )}
+            </div>
+          </div>
+        )}
+      </nav>
+
+      {/* Main Content */}
+      <main className="flex-grow bg-gray-50 relative overflow-hidden">
+        {loading && currentSection === "home" ? (
+          <div className="flex items-center justify-center h-96 relative z-10">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-600"></div>
+          </div>
+        ) : (
+          renderSection()
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="text-white py-8 bg-gradient-to-b from-green-800 to-green-900 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/5 before:to-transparent before:pointer-events-none">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col sm:flex-row flex-wrap justify-center lg:justify-between gap-8 text-center lg:text-left">
+            {/* LCF */}
+            <div className="flex flex-col items-center lg:items-start">
+              <div className="flex items-center gap-3">
+                <Dialog open={adminOpen} onOpenChange={setAdminOpen}>
+                  <DialogTrigger asChild>
+                    <button className="cursor-pointer hover:opacity-80 transition-opacity">
+                      <img src={LCF_LOGO} alt="LCF Logo" className="w-10 h-10 rounded-lg object-contain" />
+                    </button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-sm">
+                    <DialogHeader>
+                      <DialogTitle>Panel de Administración</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="pin">PIN de Acceso</Label>
+                        <Input
+                          id="pin"
+                          type="password"
+                          placeholder="Ingresa tu PIN"
+                          value={loginPin}
+                          onChange={(e) => setLoginPin(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                          className="text-center text-lg tracking-widest"
+                        />
+                      </div>
+                      <Button onClick={handleLogin} className="w-full bg-green-600 hover:bg-green-700">
+                        Acceder
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                <span className="text-xl font-bold">Liga Caldense de Fútbol</span>
+              </div>
+            </div>
+
+            {/* Social */}
+            <div className="flex flex-col items-center lg:items-start">
+              <h4 className="font-semibold mb-4">Síguenos</h4>
+              <div className="flex space-x-4">
+                <a href="#" className="text-green-200 hover:text-white transition-colors">
+                  <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                  </svg>
+                </a>
+                <a href="#" className="text-green-200 hover:text-white transition-colors">
+                  <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+                  </svg>
+                </a>
+              </div>
+            </div>
+
+            {/* Contact */}
+            <div className="flex flex-col items-center lg:items-start">
+              <h4 className="font-semibold mb-4">Contacto</h4>
+              <div className="flex items-center gap-2 text-green-200">
+                <Mail className="h-4 w-4" />
+                <span className="text-sm">info@ligacaldense.com</span>
+              </div>
+            </div>
+          </div>
+          <div className="mt-8 pt-6 border-t border-green-700 text-center text-green-200 text-sm">
+            <p>&copy; {new Date().getFullYear()} Liga Caldense de Fútbol. Todos los derechos reservados.</p>
+          </div>
+        </div>
+      </footer>
+
+      {/* Image Dialog */}
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0 bg-black/95 border-none">
+          <DialogHeader>
+            <DialogTitle className="sr-only">{selectedImage?.alt || "Imagen ampliada"}</DialogTitle>
+          </DialogHeader>
+          <button onClick={() => setSelectedImage(null)} className="absolute top-4 right-4 z-10 bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-colors">
+            <X className="h-6 w-6" />
+          </button>
+          {selectedImage && (
+            <div className="relative w-full h-full flex items-center justify-center p-4">
+              <img src={selectedImage.src} alt={selectedImage.alt} className="max-w-full max-h-[80vh] object-contain rounded-lg" />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
